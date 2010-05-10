@@ -5,18 +5,29 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "simpleserial.h"
+#define BUFFERSIZE 256
 
+#include "simpleserial.h"
 SimpleSerial::SimpleSerial() {
 	_fd = -1;
+	buffer.data = new char[BUFFERSIZE];
 }
 
 int SimpleSerial::open(const char* device) {
 	_fd = ::open(device,  O_RDWR|O_NOCTTY | O_NONBLOCK );
 }
 
-int SimpleSerial::read(char* buf, ssize_t size) {
-	return ::read(_fd,buf, size);
+const binary_data* SimpleSerial::read(void) {
+	int i = ::read(_fd, buffer.data, BUFFERSIZE);
+	
+	if (i>0) {
+		buffer.size = i;
+		buffer.data[i] = 0;
+		printf("(%d) : %s\n", i, buffer.data);
+	} else
+		buffer.size = 0;
+
+	return &buffer;
 }
 
 int SimpleSerial::write(char* buf, ssize_t size) {
@@ -28,17 +39,17 @@ int SimpleSerial::close() {
 }
 
 
-// #define TESTCODE
+#define TESTCODE
 #ifdef TESTCODE
 int main() {
-	char buf[32];
+	const binary_data* buffer;
 	SimpleSerial serial;
 
 
-	serial.open("/dev/ttyS0");
+	serial.open("/dev/ttyPS1");
 	while (1) {
-		printf("read %d bytes\n", serial.read(buf,sizeof(buf)));
-		usleep(100000);
+		buffer = serial.read();
+		usleep(10000);
 	}
 	
 }
